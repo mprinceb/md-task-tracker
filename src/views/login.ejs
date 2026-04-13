@@ -1,0 +1,10 @@
+<!doctype html><html><head><link rel="stylesheet" href="/styles.css"><title>Login</title></head><body>
+<h1>Markdown Work Tracker</h1>
+<p class="muted">owner/owner123 or manager/manager123 (change via env).</p>
+<% if (typeof error !== 'undefined') { %><p><%= error %></p><% } %>
+<form method="post" action="/login">
+  <label>Username<input name="username" required></label>
+  <label>Password<input type="password" name="password" required></label>
+  <button type="submit">Login</button>
+</form>
+</body></html>

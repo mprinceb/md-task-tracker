@@ -1,0 +1,10 @@
+<!doctype html><html><head><link rel="stylesheet" href="/styles.css"><title>Manager View</title></head><body>
+<nav><a href="/">Manager Dashboard</a><a href="/tasks">Tasks</a><a href="/history/changes?range=today">History</a><a href="/summary?range=week">Summary</a><form class="inline" method="post" action="/logout"><button>Logout</button></form></nav>
+<h1>Manager Read-only Dashboard</h1>
+<div class="grid">
+<div class="card"><h3>In Progress</h3><ul><% focus.forEach(t=>{ %><li><%= t.title %> (<%= t.updated_at %>)</li><% }) %></ul></div>
+<div class="card"><h3>Blocked</h3><ul><% blocked.forEach(t=>{ %><li><%= t.title %></li><% }) %></ul></div>
+<div class="card"><h3>Done Recently</h3><ul><% doneRecent.forEach(t=>{ %><li><%= t.title %></li><% }) %></ul></div>
+<div class="card"><h3>Changed This Week</h3><ul><% changedWeek.slice(0,10).forEach(c=>{ %><li><%= c.taskTitle %> — <%= c.type %></li><% }) %></ul></div>
+</div>
+</body></html>
