@@ -1,0 +1,15 @@
+<!doctype html><html><head><link rel="stylesheet" href="/styles.css"><title><%= task.title %></title></head><body>
+<nav><a href="/">Dashboard</a><a href="/tasks">Tasks</a></nav>
+<h1><%= task.title %></h1>
+<p class="muted">id: <%= task.id %></p>
+<% if (user.role === 'owner') { %>
+<form method="post" action="/tasks/<%= task.id %>/update">
+<div class="row"><input name="title" value="<%= task.title %>"><select name="status"><% ['pending','in_progress','blocked','done','dropped'].forEach(s=>{ %><option <%= task.status===s?'selected':'' %>><%= s %></option><% }) %></select><select name="priority"><% ['low','medium','high','critical'].forEach(p=>{ %><option <%= task.priority===p?'selected':'' %>><%= p %></option><% }) %></select></div>
+<div class="row"><input name="category" value="<%= task.category %>"><input name="due_date" type="date" value="<%= task.due_date || '' %>"><input name="tags" value="<%= task.tags.join(', ') %>"></div>
+<textarea name="summary"><%= task.summary %></textarea><textarea name="next_steps"><%= task.next_steps.join('\n') %></textarea><textarea name="notes"><%= task.notes||'' %></textarea><button>Save</button>
+</form>
+<form method="post" action="/tasks/<%= task.id %>/worklog"><h3>Quick Add Worklog</h3><div class="row"><input name="date" type="date" required><select name="kind"><option>progress</option><option>decision</option><option>blocker</option><option>scope_change</option><option>note</option></select></div><textarea name="text" required></textarea><button>Add Worklog</button></form>
+<% if (!task.archived) { %><form method="post" action="/tasks/<%= task.id %>/archive"><button>Archive</button></form><% } else { %><form method="post" action="/tasks/<%= task.id %>/restore"><button>Restore</button></form><% } %>
+<% } %>
+<h3>Worklog</h3><ul><% task.worklog.forEach(w=>{ %><li><%= w.date %> [<%= w.kind || 'note' %>] <%= w.text %></li><% }) %></ul>
+</body></html>

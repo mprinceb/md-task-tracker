@@ -1,0 +1,7 @@
+<!doctype html><html><head><link rel="stylesheet" href="/styles.css"><title>Tasks</title></head><body>
+<nav><a href="/">Dashboard</a><a href="/tasks">Tasks</a></nav>
+<h1>Active Tasks</h1>
+<form method="get"><div class="row"><input name="q" placeholder="search" value="<%= query.q || '' %>"><select name="status"><option value="">status</option><option>pending</option><option>in_progress</option><option>blocked</option><option>done</option><option>dropped</option></select><select name="priority"><option value="">priority</option><option>low</option><option>medium</option><option>high</option><option>critical</option></select><input name="category" placeholder="category"><input name="tag" placeholder="tag"><button>Filter</button></div></form>
+<table><tr><th>Title</th><th>Status</th><th>Priority</th><th>Category</th><th>Due</th><th>Updated</th><th>Tags</th></tr>
+<% tasks.forEach(t=>{ %><tr><td><a href="/tasks/<%= t.id %>"><%= t.title %></a></td><td><%= t.status %></td><td><%= t.priority %></td><td><%= t.category %></td><td><%= t.due_date||'' %></td><td><%= t.updated_at %></td><td><%= t.tags.join(', ') %></td></tr><% }) %>
+</table></body></html>
