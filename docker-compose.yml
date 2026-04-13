@@ -1,0 +1,15 @@
+version: '3.9'
+services:
+  tracker:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - OWNER_USER=owner
+      - OWNER_PASSWORD=owner123
+      - MANAGER_USER=manager
+      - MANAGER_PASSWORD=manager123
+      - SESSION_SECRET=change-me
+    volumes:
+      - ./:/app
+    command: npm run dev
