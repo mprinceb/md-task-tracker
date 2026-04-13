@@ -1,10 +1,5 @@
 import { execFileSync } from 'node:child_process';
-
-export interface GitCommitMeta {
-  hash: string;
-  isoDate: string;
-  subject: string;
-}
+import path from 'node:path';
 
 export class GitService {
   constructor(private repoRoot: string, private dataFileRel: string) {}
@@ -22,39 +17,29 @@ export class GitService {
   }
 
   commitIfChanged(message: string): boolean {
-    this.run(['add', this.dataFileRel]);
-    const status = this.run(['status', '--porcelain', '--', this.dataFileRel]);
+    const file = this.dataFileRel;
+    this.run(['add', file]);
+    const status = this.run(['status', '--porcelain', '--', file]);
     if (!status) return false;
-    this.run(['commit', '-m', message, '--', this.dataFileRel]);
+    this.run(['commit', '-m', message, '--', file]);
     return true;
   }
 
-  fileAtCommit(spec: string): string {
-    return this.run(['show', `${spec}:${this.dataFileRel}`]);
+  fileAtCommit(commit: string): string {
+    return this.run(['show', `${commit}:${this.dataFileRel}`]);
   }
 
-  commitTimelineSince(sinceIso: string): GitCommitMeta[] {
-    const out = this.run([
-      'log',
-      '--since',
-      sinceIso,
-      '--reverse',
-      '--pretty=format:%H|%cI|%s',
-      '--',
-      this.dataFileRel,
-    ]);
-    if (!out) return [];
-    return out
-      .split('\n')
-      .filter(Boolean)
-      .map((line) => {
-        const [hash, isoDate, subject] = line.split('|');
-        return { hash, isoDate, subject };
-      });
+  commitsSince(sinceIso: string): string[] {
+    const output = this.run(['log', '--since', sinceIso, '--pretty=format:%H', '--', this.dataFileRel]);
+    return output ? output.split('\n').filter(Boolean) : [];
   }
 
-  lastCommitTouchingFileBefore(sinceIso: string): string | null {
-    const out = this.run(['rev-list', '-n', '1', `--before=${sinceIso}`, 'HEAD', '--', this.dataFileRel]);
-    return out || null;
+  commitsCount(): number {
+    const out = this.run(['rev-list', '--count', 'HEAD']);
+    return Number(out || '0');
+  }
+
+  repoPath(): string {
+    return path.join(this.repoRoot, this.dataFileRel);
   }
 }

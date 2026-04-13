@@ -20,10 +20,10 @@ Override via env vars (`OWNER_USER`, `OWNER_PASSWORD`, `MANAGER_USER`, `MANAGER_
 ## Architecture
 
 - `src/core/types.ts`: strict schema for tasks/worklog/status/priority.
-- `src/core/markdown.ts`: deterministic parser + canonical serializer with strict malformed-structure detection.
-- `src/core/store.ts`: transactional writes, validation, atomic save, parse-before-replace safety, and backup on failed write.
-- `src/core/git.ts`: git init/add/commit/history timeline helpers.
-- `src/core/history.ts`: semantic change classification and commit-scoped timeline diffing.
+- `src/core/markdown.ts`: deterministic parser + canonical serializer.
+- `src/core/store.ts`: transactional writes, validation, CRUD, and commit calls.
+- `src/core/git.ts`: git init/add/commit/history helpers.
+- `src/core/history.ts`: semantic change classification (added, status, metadata, content, worklog, archive/restore, scope).
 - `src/server.ts`: auth, owner/manager role enforcement, HTML views, required APIs.
 
 ## Markdown schema
@@ -42,7 +42,6 @@ Serialization guarantees deterministic order and formatting for clean git diffs.
 - repo auto-initialized if missing.
 - board init commit when first file is created.
 - every mutation calls save -> `git add data/work-board.md` -> commit with structured message.
-- history views walk commit timeline and produce semantic changes from structured snapshots rather than raw line-only diffs.
 
 ## Required endpoints
 

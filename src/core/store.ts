@@ -32,18 +32,7 @@ export class BoardStore {
     board.tasks.forEach((t) => validateTask(t, ids));
     const serialized = serializeWorkBoard(board);
     const tmp = `${this.dataPath}.tmp`;
-    const backup = `${this.dataPath}.bak`;
-    const current = fs.existsSync(this.dataPath) ? fs.readFileSync(this.dataPath, 'utf-8') : '';
     fs.writeFileSync(tmp, serialized, 'utf-8');
-
-    try {
-      parseWorkBoard(serialized);
-    } catch (error) {
-      fs.writeFileSync(backup, current, 'utf-8');
-      fs.rmSync(tmp, { force: true });
-      throw new Error(`Refusing to write invalid markdown: ${(error as Error).message}`);
-    }
-
     fs.renameSync(tmp, this.dataPath);
     this.git.commitIfChanged(commitMsg);
   }

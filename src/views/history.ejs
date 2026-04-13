@@ -1,5 +1,5 @@
 <!doctype html><html><head><link rel="stylesheet" href="/styles.css"><title>History</title></head><body>
 <nav><a href="/">Dashboard</a><a href="/history/changes?range=today">Today</a><a href="/history/changes?range=week">Week</a></nav>
 <h1>Changes (<%= range %>)</h1>
-<ul><% changes.forEach(c=>{ %><li><strong><%= c.taskTitle %></strong> — <%= c.type %> — <%= c.detail %> <span class="muted">(<%= c.commitDate %>, <%= c.commit.slice(0,7) %>)</span></li><% }) %></ul>
+<ul><% changes.forEach(c=>{ %><li><strong><%= c.taskTitle %></strong> — <%= c.type %> — <%= c.detail %></li><% }) %></ul>
 </body></html>

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { authenticate } from './core/auth.js';
 import { BoardStore } from './core/store.js';
 import { Task, TaskPriority, TaskStatus, WorklogKind } from './core/types.js';
-import { buildSummary, historyChanges } from './core/history.js';
+import { historyChanges } from './core/history.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,12 +32,6 @@ function requireOwner(req: express.Request, res: express.Response, next: express
   if (req.session.user?.role !== 'owner') return void res.status(403).send('Read-only manager account');
   next();
 }
-function toSince(range: string, customSince?: string): Date {
-  const now = new Date();
-  if (range === 'week') return new Date(now.getTime() - 7 * 86400000);
-  if (range === 'custom' && customSince) return new Date(customSince);
-  return new Date(now.toISOString().slice(0, 10) + 'T00:00:00Z');
-}
 
 app.get('/login', (_req, res) => res.render('login'));
 app.post('/login', async (req, res) => {
@@ -49,22 +43,21 @@ app.post('/login', async (req, res) => {
 app.post('/logout', requireAuth, (req, res) => req.session.destroy(() => res.redirect('/login')));
 
 app.get('/', requireAuth, (req, res) => {
-  try {
-    const tasks = store.listTasks();
-    const changesToday = historyChanges(store.getGitService(), toSince('today').toISOString());
-    const changesWeek = historyChanges(store.getGitService(), toSince('week').toISOString());
-    res.render(req.session.user?.role === 'manager' ? 'manager' : 'dashboard', {
-      user: req.session.user,
-      tasks,
-      focus: tasks.filter((t) => !t.archived && t.status === 'in_progress'),
-      blocked: tasks.filter((t) => !t.archived && t.status === 'blocked'),
-      doneRecent: tasks.filter((t) => !t.archived && t.status === 'done').slice(0, 5),
-      changedToday: changesToday,
-      changedWeek: changesWeek,
-    });
-  } catch (error) {
-    res.status(500).send(`Board parse error: ${(error as Error).message}`);
-  }
+  const tasks = store.listTasks();
+  const now = new Date();
+  const todayIso = now.toISOString().slice(0, 10);
+  const weekAgo = new Date(now.getTime() - 7 * 86400000).toISOString();
+  const changesToday = historyChanges(store.getGitService(), tasks, `${todayIso}T00:00:00Z`);
+  const changesWeek = historyChanges(store.getGitService(), tasks, weekAgo);
+  res.render(req.session.user?.role === 'manager' ? 'manager' : 'dashboard', {
+    user: req.session.user,
+    tasks,
+    focus: tasks.filter((t) => !t.archived && t.status === 'in_progress'),
+    blocked: tasks.filter((t) => !t.archived && t.status === 'blocked'),
+    doneRecent: tasks.filter((t) => t.status === 'done').slice(0, 5),
+    changedToday: changesToday,
+    changedWeek: changesWeek,
+  });
 });
 
 app.get('/tasks', requireAuth, (req, res) => {
@@ -135,17 +128,20 @@ app.post('/tasks/:id/restore', requireAuth, requireOwner, (req, res) => { store.
 
 app.get('/history/changes', requireAuth, (req, res) => {
   const range = (req.query.range as string) ?? 'today';
-  const since = toSince(range, req.query.since as string | undefined);
-  const changes = historyChanges(store.getGitService(), since.toISOString());
+  const now = new Date();
+  let since = new Date(now.toISOString().slice(0, 10) + 'T00:00:00Z');
+  if (range === 'week') since = new Date(now.getTime() - 7 * 86400000);
+  if (range === 'custom' && req.query.since) since = new Date(String(req.query.since));
+  const changes = historyChanges(store.getGitService(), store.listTasks(), since.toISOString());
   res.render('history', { changes, range, user: req.session.user });
 });
 
 app.get('/summary', requireAuth, (req, res) => {
   const range = (req.query.range as string) ?? 'today';
-  const since = toSince(range, req.query.since as string | undefined);
-  const changes = historyChanges(store.getGitService(), since.toISOString());
-  const title = `${range === 'week' ? 'Weekly' : 'Daily'} Summary — ${new Date().toISOString().slice(0, 10)}`;
-  const text = buildSummary(changes, title);
+  const since = range === 'week' ? new Date(Date.now() - 7 * 86400000) : new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00Z');
+  const changes = historyChanges(store.getGitService(), store.listTasks(), since.toISOString());
+  const byType = (type: string) => changes.filter((c) => c.type === type).map((c) => `- ${c.taskTitle} — ${c.detail}`).join('\n') || '- None';
+  const text = `## ${range === 'week' ? 'Weekly' : 'Daily'} Summary — ${new Date().toISOString().slice(0, 10)}\n\n### Added\n${byType('added')}\n\n### Progressed\n${byType('worklog_updated')}\n\n### Done\n${changes.filter((c) => c.type === 'status_changed' && c.detail.endsWith('-> done')).map((c) => `- ${c.taskTitle}`).join('\n') || '- None'}\n\n### Blocked\n${changes.filter((c) => c.type === 'status_changed' && c.detail.endsWith('-> blocked')).map((c) => `- ${c.taskTitle}`).join('\n') || '- None'}\n\n### Dropped\n${changes.filter((c) => c.type === 'status_changed' && c.detail.endsWith('-> dropped')).map((c) => `- ${c.taskTitle}`).join('\n') || '- None'}\n\n### Scope Changed\n${byType('scope_changed')}\n`;
   res.render('summary', { text, user: req.session.user, range });
 });
 
@@ -158,19 +154,14 @@ app.post('/api/tasks/:id/archive', requireAuth, requireOwner, (req, res) => res.
 app.post('/api/tasks/:id/restore', requireAuth, requireOwner, (req, res) => res.json(store.setArchived(req.params.id, false)));
 app.get('/api/history/changes', requireAuth, (req, res) => {
   const range = String(req.query.range ?? 'today');
-  const since = toSince(range, req.query.since as string | undefined);
-  res.json(historyChanges(store.getGitService(), since.toISOString()));
+  const since = range === 'week' ? new Date(Date.now() - 7 * 86400000) : new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00Z');
+  res.json(historyChanges(store.getGitService(), store.listTasks(), since.toISOString()));
 });
 app.get('/api/history/task/:id', requireAuth, (req, res) => {
-  const changes = historyChanges(store.getGitService(), new Date(Date.now() - 30 * 86400000).toISOString()).filter((c) => c.taskId === req.params.id);
+  const changes = historyChanges(store.getGitService(), store.listTasks(), new Date(Date.now() - 30 * 86400000).toISOString()).filter((c) => c.taskId === req.params.id);
   res.json(changes);
 });
-app.get('/api/summary', requireAuth, (req, res) => {
-  const range = String(req.query.range ?? 'today');
-  const since = toSince(range, req.query.since as string | undefined);
-  const title = `${range === 'week' ? 'Weekly' : 'Daily'} Summary — ${new Date().toISOString().slice(0, 10)}`;
-  res.json({ range, summary: buildSummary(historyChanges(store.getGitService(), since.toISOString()), title) });
-});
+app.get('/api/summary', requireAuth, (req, res) => res.json({ range: req.query.range ?? 'today', generated_at: new Date().toISOString() }));
 
 const port = Number(process.env.PORT ?? 3000);
 app.listen(port, () => console.log(`Server listening on http://localhost:${port}`));
