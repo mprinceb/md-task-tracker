@@ -1,0 +1,16 @@
+<!doctype html><html><head><link rel="stylesheet" href="/styles.css"><title>Owner Dashboard</title></head><body>
+<nav><a href="/">Dashboard</a><a href="/tasks">Tasks</a><a href="/history/changes?range=today">History</a><a href="/summary?range=today">Summary</a><form class="inline" method="post" action="/logout"><button>Logout</button></form></nav>
+<h1>Owner Dashboard</h1>
+<div class="grid">
+<div class="card"><h3>In Progress</h3><ul><% focus.forEach(t=>{ %><li><a href="/tasks/<%= t.id %>"><%= t.title %></a></li><% }) %></ul></div>
+<div class="card"><h3>Blocked</h3><ul><% blocked.forEach(t=>{ %><li><%= t.title %></li><% }) %></ul></div>
+<div class="card"><h3>Changed Today</h3><ul><% changedToday.forEach(c=>{ %><li><%= c.taskTitle %> — <%= c.type %></li><% }) %></ul></div>
+<div class="card"><h3>Changed This Week</h3><ul><% changedWeek.slice(0,10).forEach(c=>{ %><li><%= c.taskTitle %> — <%= c.type %></li><% }) %></ul></div>
+</div>
+<h2>Quick Add Task</h2>
+<form method="post" action="/tasks">
+<div class="row"><input name="id" placeholder="id (slug)" required><input name="title" placeholder="title" required></div>
+<div class="row"><select name="status"><option>pending</option><option>in_progress</option><option>blocked</option><option>done</option><option>dropped</option></select><select name="priority"><option>medium</option><option>low</option><option>high</option><option>critical</option></select><input name="category" value="work"></div>
+<input name="tags" placeholder="comma tags"><input name="due_date" type="date"><textarea name="summary" placeholder="summary"></textarea><textarea name="next_steps" placeholder="next steps, one per line"></textarea><textarea name="notes" placeholder="notes"></textarea>
+<button>Create Task</button></form>
+</body></html>
